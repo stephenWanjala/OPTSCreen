@@ -25,10 +25,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
@@ -63,11 +67,13 @@ class SmsReceiver : BroadcastReceiver() {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun OtpScreen() {
     val context = LocalContext.current
     val smsReceiver = remember { SmsReceiver() }
     val focusRequesters = remember { List(6) { FocusRequester() } }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Register the BroadcastReceiver
     DisposableEffect(Unit) {
@@ -102,7 +108,13 @@ fun OtpScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        OtpDigitsRow(otpDigits = otpDigits, focusRequesters = focusRequesters)
+        if (keyboardController != null) {
+            OtpDigitsRow(
+                otpDigits = otpDigits,
+                focusRequesters = focusRequesters,
+                keyboardController = keyboardController
+            )
+        }
         Button(
             onClick = { verifyOtp(context = context, otp = otpDigits.joinToString("")) }
         ) {
@@ -123,8 +135,13 @@ fun verifyOtp(context: Context, otp: String) {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun OtpDigitsRow(otpDigits: MutableList<String>, focusRequesters: List<FocusRequester>) {
+fun OtpDigitsRow(
+    otpDigits: MutableList<String>,
+    focusRequesters: List<FocusRequester>,
+    keyboardController: SoftwareKeyboardController
+) {
     Row(modifier = Modifier.wrapContentWidth()) {
         otpDigits.forEachIndexed { index, digit ->
             OtpTextField(
@@ -134,10 +151,15 @@ fun OtpDigitsRow(otpDigits: MutableList<String>, focusRequesters: List<FocusRequ
                         otpDigits[index] = newValue
                         if (newValue.isNotEmpty() && index < otpDigits.lastIndex) {
                             focusRequesters[index + 1].requestFocus()
+                        } else if (index == otpDigits.lastIndex) {
+                            keyboardController.hide() // Dismiss the keyboard
                         }
                     }
                 },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = if (index == otpDigits.lastIndex) ImeAction.Done else ImeAction.Next
+                ),
                 focusRequester = focusRequesters[index],
                 modifier = Modifier
                     .weight(1f)
@@ -146,7 +168,6 @@ fun OtpDigitsRow(otpDigits: MutableList<String>, focusRequesters: List<FocusRequ
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
