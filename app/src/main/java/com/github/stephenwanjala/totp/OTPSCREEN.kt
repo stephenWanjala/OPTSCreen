@@ -29,11 +29,13 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
 class SmsReceiver : BroadcastReceiver() {
@@ -115,18 +117,18 @@ fun OtpScreen() {
                 keyboardController = keyboardController
             )
         }
-        Button(
-            onClick = { verifyOtp(context = context, otp = otpDigits.joinToString("")) }
-        ) {
+        Button(onClick = { verifyOtp(context = context, otp = otpDigits.joinToString("")) }) {
             Text(text = "Verify")
         }
     }
 
 }
 
+
 fun verifyOtp(context: Context, otp: String) {
-    // Perform verification logic here
-    if (otp.length == 6) {
+    val regex = Regex("\\d+") // Regular expression to match digits only
+
+    if (otp.length == 6 && regex.matches(otp)) {
         // Verification successful
         Toast.makeText(context, "OTP verified successfully", Toast.LENGTH_SHORT).show()
     } else {
@@ -157,9 +159,9 @@ fun OtpDigitsRow(
                     }
                 },
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = if (index == otpDigits.lastIndex) ImeAction.Done else ImeAction.Next
+                    keyboardType = KeyboardType.Number, imeAction = ImeAction.Next
                 ),
+                visualTransformation = VisualTransformation.None,
                 focusRequester = focusRequesters[index],
                 modifier = Modifier
                     .weight(1f)
@@ -169,21 +171,34 @@ fun OtpDigitsRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun OtpTextField(
     value: String,
     onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions,
     focusRequester: FocusRequester,
+    visualTransformation: VisualTransformation,
     modifier: Modifier = Modifier
 ) {
-    TextField(
-        value = value,
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    TextField(value = value,
         onValueChange = onValueChange,
         keyboardOptions = keyboardOptions,
+        visualTransformation = visualTransformation,
         maxLines = 1,
         modifier = modifier
             .focusRequester(focusRequester)
-    )
+            .onFocusChanged { state ->
+                if (!state.isFocused) {
+                    keyboardController?.hide() // Dismiss the keyboard when losing focus
+                }
+            })
 }
+
+
+
+
+
+
