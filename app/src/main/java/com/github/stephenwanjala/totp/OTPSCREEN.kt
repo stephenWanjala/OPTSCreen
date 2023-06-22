@@ -63,7 +63,6 @@ class SmsReceiver : BroadcastReceiver() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtpScreen() {
     val context = LocalContext.current
@@ -83,8 +82,6 @@ fun OtpScreen() {
         }
     }
     val otpString = smsReceiver.otpCode
-
-    // Display the OTP code received from the BroadcastReceiver
 
     val otpDigits = remember { mutableStateListOf("", "", "", "", "", "") }
 
